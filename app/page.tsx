@@ -29,14 +29,19 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [currentHost, setCurrentHost] = useState('');
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // Auto-focus textarea on mount
+  // Auto-focus textarea on mount and get current host
   useEffect(() => {
     textareaRef.current?.focus();
+    // Get current browser host (client-side only)
+    if (typeof window !== 'undefined') {
+      setCurrentHost(window.location.host);
+    }
   }, []);
 
   // Modal focus management
@@ -242,7 +247,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="text-sm text-gray-400 font-mono">
-              127.0.0.1:8000
+              {currentHost || 'localhost:3000'}
             </div>
           </div>
 
