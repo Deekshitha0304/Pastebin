@@ -48,7 +48,7 @@ This is a production-ready paste-sharing service built with Next.js, TypeScript,
 ### Standard Commands
 
 - `npm run dev` - Start development server
-- `npm run build` - Build for production
+- `npm run build` - Build for production (automatically runs `prisma migrate deploy` before building)
 - `npm start` - Start production server
 - `npm test` - Run test suite
 - `npx prisma studio` - Open database GUI
@@ -180,9 +180,9 @@ Unavailable (404):
    - `DATABASE_URL` - Your Neon PostgreSQL connection string
 3. **Deploy** - Vercel will automatically:
    - Install dependencies
-   - Generate Prisma client
+   - Generate Prisma client (`postinstall` script)
+   - Run database migrations (`prisma migrate deploy` in build script)
    - Build the application
-   - Run migrations (via build process)
 
 ### Production Database
 
