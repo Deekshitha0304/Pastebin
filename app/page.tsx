@@ -86,14 +86,6 @@ export default function HomePage() {
     // Content is required
     if (!content.trim()) return false;
     
-    // At least one expiry method must be set
-    const hasTtlSeconds = ttlSeconds && ttlSeconds >= 1;
-    const hasMaxViews = maxViews && maxViews >= 1;
-    
-    if (!hasTtlSeconds && !hasMaxViews) {
-      return false; // Need at least one expiry method
-    }
-    
     // If ttl_seconds is set, it must be >= 1
     if (ttlSeconds !== '' && ttlSeconds < 1) {
       return false;
@@ -104,6 +96,7 @@ export default function HomePage() {
       return false;
     }
     
+    // Both fields are optional per spec - paste can have no expiry
     return true;
   };
 
@@ -145,7 +138,7 @@ export default function HomePage() {
     e.preventDefault();
     
     if (!isFormValid()) {
-      setError('Please add content and at least one expiry method (time or max views)');
+      setError('Please add content. TTL and max views are optional.');
       return;
     }
 
@@ -258,7 +251,7 @@ export default function HomePage() {
               />
               {!content.trim() && (
                 <p className="text-sm text-gray-400 italic mt-2 text-center">
-                  Add content and at least one expiry option to enable the button.
+                  Add content to enable the button.
                 </p>
               )}
             </div>

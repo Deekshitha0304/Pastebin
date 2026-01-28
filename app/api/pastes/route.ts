@@ -42,14 +42,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // At least one expiry method must be provided
-    if (!ttl_seconds && !max_views) {
-      return NextResponse.json(
-        { error: 'At least one expiry method (ttl_seconds or max_views) must be provided' },
-        { status: 400 }
-      );
-    }
-
     // Generate unique ID
     const id = generateSnippetId();
 
