@@ -38,7 +38,7 @@ export default function SnippetPage() {
 
     const updateCountdown = () => {
       const now = new Date().getTime();
-      const expiry = new Date(snippet.expiresAt).getTime();
+      const expiry = new Date(snippet.expiresAt!).getTime();
       const distance = expiry - now;
 
       if (distance < 0) {
