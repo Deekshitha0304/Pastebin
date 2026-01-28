@@ -8,9 +8,22 @@
 import { useState, FormEvent, ChangeEvent, useEffect, useRef } from 'react';
 
 export default function HomePage() {
+  // Helper to get default expiry time (1 hour from now)
+  const getDefaultExpiryTime = () => {
+    const date = new Date();
+    date.setHours(date.getHours() + 1);
+    // Format for datetime-local input: YYYY-MM-DDTHH:mm
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [content, setContent] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [maxViews, setMaxViews] = useState<number | ''>('');
+  const [expiresAt, setExpiresAt] = useState(getDefaultExpiryTime());
+  const [maxViews, setMaxViews] = useState<number | ''>(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snippetUrl, setSnippetUrl] = useState('');
   const [error, setError] = useState('');
@@ -94,8 +107,8 @@ export default function HomePage() {
     setCopyStatus('idle');
     // Reset form and refocus textarea
     setContent('');
-    setExpiresAt('');
-    setMaxViews('');
+    setExpiresAt(getDefaultExpiryTime());
+    setMaxViews(10);
     setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
@@ -240,10 +253,10 @@ export default function HomePage() {
               {/* TTL Input */}
               <div className="bg-gray-50 rounded-lg p-5">
                 <label htmlFor="expiresAt" className="block text-sm font-semibold text-gray-700 mb-2">
-                  TTL (seconds)
+                  Expiry Time
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
-                  Leave blank for default retention.
+                  When should this paste expire?
                 </p>
                 <input
                   type="datetime-local"
@@ -269,7 +282,7 @@ export default function HomePage() {
                   value={maxViews}
                   onChange={handleMaxViewsChange}
                   min="1"
-                  placeholder="Optional (e.g. 10)"
+                  placeholder="e.g., 10"
                   className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none transition-all"
                   required
                 />
@@ -296,9 +309,9 @@ export default function HomePage() {
               
               {/* Settings Preview */}
               <div className="flex items-center justify-end gap-4 mt-3 text-sm text-gray-500">
-                <span>TTL: {expiresAt ? 'custom' : 'default'}</span>
+                <span>Expiry: {expiresAt ? new Date(expiresAt).toLocaleString() : 'not set'}</span>
                 <span>•</span>
-                <span>Max views: {maxViews || 'unlimited'}</span>
+                <span>Max views: {maxViews || 'not set'}</span>
               </div>
             </div>
           </form>
