@@ -22,8 +22,8 @@ export default function HomePage() {
   };
 
   const [content, setContent] = useState('');
-  const [expiresAt, setExpiresAt] = useState(getDefaultExpiryTime());
-  const [maxViews, setMaxViews] = useState<number | ''>(10);
+  const [expiresAt, setExpiresAt] = useState('');
+  const [maxViews, setMaxViews] = useState<number | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snippetUrl, setSnippetUrl] = useState('');
   const [error, setError] = useState('');
@@ -91,13 +91,27 @@ export default function HomePage() {
 
   // Client-side validation
   const isFormValid = (): boolean => {
+    // Content is required
     if (!content.trim()) return false;
-    if (!expiresAt) return false;
-    if (!maxViews || maxViews <= 0) return false;
     
-    // Check if expiry date is in the future
-    const expiryDate = new Date(expiresAt);
-    if (expiryDate <= new Date()) return false;
+    // At least one expiry method must be set
+    const hasExpiresAt = expiresAt && expiresAt.trim() !== '';
+    const hasMaxViews = maxViews && maxViews > 0;
+    
+    if (!hasExpiresAt && !hasMaxViews) {
+      return false; // Need at least one expiry method
+    }
+    
+    // If expiry date is set, it must be in the future
+    if (hasExpiresAt) {
+      const expiryDate = new Date(expiresAt);
+      if (expiryDate <= new Date()) return false;
+    }
+    
+    // If maxViews is set, it must be positive
+    if (hasMaxViews && maxViews <= 0) {
+      return false;
+    }
     
     return true;
   };
@@ -107,8 +121,8 @@ export default function HomePage() {
     setCopyStatus('idle');
     // Reset form and refocus textarea
     setContent('');
-    setExpiresAt(getDefaultExpiryTime());
-    setMaxViews(10);
+    setExpiresAt('');
+    setMaxViews('');
     setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
@@ -140,7 +154,7 @@ export default function HomePage() {
     e.preventDefault();
     
     if (!isFormValid()) {
-      setError('Please fill in all fields correctly');
+      setError('Please add content and at least one expiry method (time or max views)');
       return;
     }
 
@@ -148,16 +162,25 @@ export default function HomePage() {
     setError('');
 
     try {
+      // Build request body with only provided fields
+      const requestBody: any = {
+        content: content.trim(),
+      };
+      
+      if (expiresAt) {
+        requestBody.expiresAt = new Date(expiresAt).toISOString();
+      }
+      
+      if (maxViews) {
+        requestBody.maxViews = Number(maxViews);
+      }
+
       const response = await fetch('/api/snippets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          content: content.trim(),
-          expiresAt: new Date(expiresAt).toISOString(),
-          maxViews: Number(maxViews),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -243,7 +266,7 @@ export default function HomePage() {
               />
               {!content.trim() && (
                 <p className="text-sm text-gray-400 italic mt-2 text-center">
-                  Add content to enable the button.
+                  Add content and at least one expiry option to enable the button.
                 </p>
               )}
             </div>
@@ -253,10 +276,10 @@ export default function HomePage() {
               {/* TTL Input */}
               <div className="bg-gray-50 rounded-lg p-5">
                 <label htmlFor="expiresAt" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Expiry Time
+                  Expiry Time <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
-                  When should this paste expire?
+                  Leave blank for no time limit.
                 </p>
                 <input
                   type="datetime-local"
@@ -264,17 +287,16 @@ export default function HomePage() {
                   value={expiresAt}
                   onChange={handleExpiresAtChange}
                   className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none transition-all"
-                  required
                 />
               </div>
 
               {/* Max Views Input */}
               <div className="bg-gray-50 rounded-lg p-5">
                 <label htmlFor="maxViews" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Max views
+                  Max views <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
-                  After this, the paste becomes unavailable.
+                  Leave blank for unlimited views.
                 </p>
                 <input
                   type="number"
@@ -284,7 +306,6 @@ export default function HomePage() {
                   min="1"
                   placeholder="e.g., 10"
                   className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none transition-all"
-                  required
                 />
               </div>
             </div>
@@ -309,9 +330,9 @@ export default function HomePage() {
               
               {/* Settings Preview */}
               <div className="flex items-center justify-end gap-4 mt-3 text-sm text-gray-500">
-                <span>Expiry: {expiresAt ? new Date(expiresAt).toLocaleString() : 'not set'}</span>
+                <span>Expiry: {expiresAt ? 'set' : 'none'}</span>
                 <span>•</span>
-                <span>Max views: {maxViews || 'not set'}</span>
+                <span>Max views: {maxViews || 'unlimited'}</span>
               </div>
             </div>
           </form>

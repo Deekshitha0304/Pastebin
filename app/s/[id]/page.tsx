@@ -12,8 +12,8 @@ import Link from 'next/link';
 type SnippetData = {
   content: string;
   viewCount: number;
-  expiresAt: string;
-  maxViews: number;
+  expiresAt: string | null;
+  maxViews: number | null;
 };
 
 type ErrorState = {
@@ -198,10 +198,10 @@ export default function SnippetPage() {
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-700">Views:</span>
             <span className="font-mono text-gray-900">
-              {snippet.viewCount} / {snippet.maxViews}
+              {snippet.viewCount}{snippet.maxViews ? ` / ${snippet.maxViews}` : ' (unlimited)'}
             </span>
           </div>
-          {countdown && (
+          {countdown && snippet.expiresAt && (
             <div className="flex items-center gap-2">
               <svg className={`w-4 h-4 ${isExpiringSoon ? 'text-yellow-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

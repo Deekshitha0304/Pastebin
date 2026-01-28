@@ -27,17 +27,19 @@ export async function GET(
       );
     }
 
-    // 2. Check time-based expiration
-    const now = new Date();
-    if (now > snippet.expiresAt) {
-      return NextResponse.json(
-        { error: 'Snippet has expired' },
-        { status: 410 }
-      );
+    // 2. Check time-based expiration (if set)
+    if (snippet.expiresAt) {
+      const now = new Date();
+      if (now > snippet.expiresAt) {
+        return NextResponse.json(
+          { error: 'Snippet has expired' },
+          { status: 410 }
+        );
+      }
     }
 
-    // 3. Check view-based expiration
-    if (snippet.viewCount >= snippet.maxViews) {
+    // 3. Check view-based expiration (if set)
+    if (snippet.maxViews !== null && snippet.viewCount >= snippet.maxViews) {
       return NextResponse.json(
         { error: 'Snippet has expired' },
         { status: 410 }
@@ -59,7 +61,7 @@ export async function GET(
       {
         content: updatedSnippet.content,
         viewCount: updatedSnippet.viewCount,
-        expiresAt: updatedSnippet.expiresAt.toISOString(),
+        expiresAt: updatedSnippet.expiresAt?.toISOString() || null,
         maxViews: updatedSnippet.maxViews,
       },
       { status: 200 }

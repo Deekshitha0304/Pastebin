@@ -9,12 +9,12 @@ datasource db {
 }
 
 model Snippet {
-  id        String   @id
+  id        String    @id
   content   String
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  maxViews  Int
-  viewCount Int      @default(0)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  maxViews  Int?
+  viewCount Int       @default(0)
 
   @@index([expiresAt])
 }

@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       data: {
         id,
         content,
-        expiresAt: new Date(expiresAt),
-        maxViews,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        maxViews: maxViews || null,
         viewCount: 0,
       },
     });
