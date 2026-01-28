@@ -5,8 +5,8 @@
  * Must render content safely (no script execution)
  */
 
-import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 
 // Helper to get current time (supports TEST_MODE)
