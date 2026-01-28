@@ -7,8 +7,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Pastebin App',
-  description: 'Share text snippets with expiration controls',
+  title: 'Pastebin Lite - Fast, plain-text sharing',
+  description: 'Drop text, get a link. Optional expiry and view limits help you share intentionally.',
 };
 
 export default function RootLayout({
@@ -18,13 +18,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <main className="container">
-          <header>
-            <h1>📋 Pastebin</h1>
-          </header>
-          {children}
-        </main>
+      <body className="min-h-screen bg-gray-50">
+        {children}
       </body>
     </html>
   );
