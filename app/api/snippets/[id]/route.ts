@@ -61,6 +61,7 @@ export async function GET(
       {
         content: updatedSnippet.content,
         viewCount: updatedSnippet.viewCount,
+        createdAt: updatedSnippet.createdAt.toISOString(),
         expiresAt: updatedSnippet.expiresAt?.toISOString() || null,
         maxViews: updatedSnippet.maxViews,
       },

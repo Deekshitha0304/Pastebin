@@ -12,6 +12,7 @@ import Link from 'next/link';
 type SnippetData = {
   content: string;
   viewCount: number;
+  createdAt: string;
   expiresAt: string | null;
   maxViews: number | null;
 };
@@ -153,7 +154,7 @@ export default function SnippetPage() {
   }
 
   // Format created date
-  const createdDate = new Date(snippet.expiresAt);
+  const createdDate = new Date(snippet.createdAt);
   const formattedCreated = createdDate.toLocaleString('en-GB', {
     day: '2-digit',
     month: '2-digit',
