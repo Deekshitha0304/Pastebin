@@ -36,3 +36,7 @@ next-env.d.ts
 # Prisma
 /prisma/migrations/*
 !/prisma/migrations/.gitkeep
+
+# Testing
+coverage/
+.jest-cache/
