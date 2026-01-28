@@ -1,301 +1,240 @@
-# Pastebin Application
+# Pastebin-Lite
 
-A production-ready, Pastebin-like web application built with Next.js, TypeScript, Prisma, and PostgreSQL. Share text snippets with automatic expiration based on time and view count.
+A small "Pastebin"-like application where users can create text pastes and share links to view them. Pastes may optionally expire based on time (TTL) or view count limits.
 
-## Features
+## Project Description
 
-- 📝 Create text snippets with unique shareable links
-- ⏰ Time-based expiration (expires after a specific date/time)
-- 👁️ View-based expiration (expires after a set number of views)
-- 🔒 Atomic view counting (thread-safe, no race conditions)
-- 🚀 Serverless-ready for Vercel deployment
-- 💾 PostgreSQL database with Prisma ORM
+This is a production-ready paste-sharing service built with Next.js, TypeScript, and PostgreSQL. Users can create text pastes with optional expiration constraints (time-based TTL or view-count limits) and receive shareable URLs. The application supports deterministic time testing for automated evaluation.
 
-## Tech Stack
+## How to Run Locally
 
-- **Framework:** Next.js 14+ (App Router)
-- **Language:** TypeScript
-- **Database:** PostgreSQL (Neon compatible)
-- **ORM:** Prisma
-- **Styling:** CSS
-- **Deployment:** Vercel
-
-## Prerequisites
-
+### Prerequisites
 - Node.js 18+ and npm
 - PostgreSQL database (local or Neon)
 - Git
 
-## Setup Instructions
+### Setup Steps
 
-### 1. Clone the Repository
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Deekshitha0304/Pastebin.git
+   cd Pastebin
+   ```
 
-```bash
-git clone <your-repo-url>
-cd pastebin
-```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-### 2. Install Dependencies
+3. **Configure environment variables:**
+   Create a `.env.local` file in the project root:
+   ```env
+   DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
+   ```
 
-```bash
-npm install
-```
+4. **Run database migrations:**
+   ```bash
+   npx prisma migrate dev
+   ```
 
-### 3. Configure Environment Variables
+5. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
 
-Create a `.env` file in the project root:
+6. **Open in browser:**
+   Visit [http://localhost:3000](http://localhost:3000)
 
-```bash
-# For Neon PostgreSQL
-DATABASE_URL="postgresql://username:password@host/database?sslmode=require"
+### Standard Commands
 
-# For local PostgreSQL
-# DATABASE_URL="postgresql://user:password@localhost:5432/pastebin?schema=public"
-```
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm test` - Run test suite
+- `npx prisma studio` - Open database GUI
 
-**Getting a Neon Database:**
-1. Sign up at https://neon.tech
-2. Create a new project
-3. Copy the connection string
-4. Paste it as `DATABASE_URL` in your `.env` file
+## Persistence Layer
 
-### 4. Run Database Migrations
+**PostgreSQL (Neon)** - A cloud-hosted PostgreSQL database is used for persistence.
 
-```bash
-npx prisma migrate dev --name init
-```
+- **Why PostgreSQL:** Serverless-compatible, reliable, and supports complex queries
+- **Why Neon:** Free tier available, serverless-compatible connection pooling, and works seamlessly with Vercel
+- **Schema:** Single `Snippet` table with fields for content, expiration times, and view counts
+- **Migrations:** Prisma migrations are included and run automatically on deployment
 
-This will:
-- Create the database schema
-- Generate the Prisma Client
-
-### 5. Run the Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Deployment to Vercel
-
-### 1. Push to GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin <your-github-repo-url>
-git push -u origin main
-```
-
-### 2. Deploy to Vercel
-
-1. Go to [vercel.com](https://vercel.com) and sign in
-2. Click "Add New Project"
-3. Import your GitHub repository
-4. Configure environment variables:
-   - Add `DATABASE_URL` with your Neon connection string
-5. Click "Deploy"
-
-### 3. Run Migrations on Production
-
-After deployment, run migrations:
-
-```bash
-npx prisma migrate deploy
-```
-
-Or set up automatic migrations by adding a build script in `package.json`:
-
-```json
-"scripts": {
-  "build": "prisma migrate deploy && next build"
+The database schema:
+```prisma
+model Snippet {
+  id        String    @id
+  content   String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?  // Optional TTL
+  maxViews  Int?       // Optional view limit
+  viewCount Int       @default(0)
+  @@index([expiresAt])
 }
 ```
+
+## Important Design Decisions
+
+### 1. API Route Structure
+- **POST /api/pastes** - Create a new paste
+- **GET /api/pastes/:id** - Fetch paste data (JSON)
+- **GET /p/:id** - View paste as HTML
+- **GET /api/healthz** - Health check endpoint
+
+### 2. Expiration Logic
+- **Time-based (TTL):** Expires after `ttl_seconds` from creation
+- **View-based:** Expires after `max_views` views
+- **Combined:** Paste becomes unavailable when **either** constraint triggers
+- **All unavailable cases return 404** (not 410) per specification
+
+### 3. TEST_MODE Support
+When `TEST_MODE=1` environment variable is set:
+- The `x-test-now-ms` header is treated as the current time for expiry logic
+- Enables deterministic testing of time-based expiration
+- Real system time is used if header is absent
+
+### 4. Atomic View Counting
+- Uses Prisma's atomic `increment` operation
+- Prevents race conditions under concurrent load
+- View count increments before checking limits
+
+### 5. HTML Safety
+- Paste content is HTML-escaped in `/p/:id` view
+- Prevents script execution (XSS protection)
+- Uses proper escaping for `<`, `>`, `&`, quotes
+
+### 6. Serverless Architecture
+- Next.js App Router with Route Handlers
+- Prisma Client with singleton pattern for connection pooling
+- No global mutable state
+- Stateless API endpoints
 
 ## API Documentation
 
-### Create Snippet
+### Health Check
+**GET /api/healthz**
+- Returns: `{"ok": true}` or `{"ok": false, "error": "..."}`
+- Status: 200
+- Reflects database connectivity
 
-**Endpoint:** `POST /api/snippets`
+### Create Paste
+**POST /api/pastes**
 
-**Request Body:**
+Request body:
 ```json
 {
-  "content": "Your text content here",
-  "expiresAt": "2024-12-31T23:59:59.000Z",
-  "maxViews": 10
+  "content": "string (required)",
+  "ttl_seconds": 60,      // Optional, integer ≥ 1
+  "max_views": 5          // Optional, integer ≥ 1
 }
 ```
 
-**Success Response (201):**
+Response (201):
 ```json
 {
-  "id": "abc123xyz",
-  "url": "https://your-domain.com/s/abc123xyz"
+  "id": "string",
+  "url": "https://your-app.vercel.app/p/<id>"
 }
 ```
 
-**Error Response (400):**
+Error (400):
 ```json
 {
-  "error": "Content cannot be empty"
+  "error": "error message"
 }
 ```
 
-### View Snippet
+### Fetch Paste
+**GET /api/pastes/:id**
 
-**Endpoint:** `GET /api/snippets/{id}`
-
-**Success Response (200):**
+Response (200):
 ```json
 {
-  "content": "Your text content here",
-  "viewCount": 3,
-  "expiresAt": "2024-12-31T23:59:59.000Z",
-  "maxViews": 10
+  "content": "string",
+  "remaining_views": 4,        // null if unlimited
+  "expires_at": "2026-01-01T00:00:00.000Z"  // null if no TTL
 }
 ```
 
-**Error Responses:**
-- **404 Not Found:** Snippet does not exist
-- **410 Gone:** Snippet has expired (time or views)
+Unavailable (404):
+```json
+{
+  "error": "Paste not found"
+}
+```
 
-## Project Structure
+### View Paste (HTML)
+**GET /p/:id**
+- Returns HTML page with paste content
+- Content is HTML-escaped for safety
+- Returns 404 if paste is unavailable
+
+## Deployment
+
+### Vercel Deployment
+
+1. **Connect GitHub repository** to Vercel
+2. **Add environment variable:**
+   - `DATABASE_URL` - Your Neon PostgreSQL connection string
+3. **Deploy** - Vercel will automatically:
+   - Install dependencies
+   - Generate Prisma client
+   - Build the application
+   - Run migrations (via build process)
+
+### Production Database
+
+The application uses Neon PostgreSQL for production persistence. Migrations are applied automatically during deployment.
+
+## Testing
+
+Run the test suite:
+```bash
+npm test
+```
+
+The application includes 15 integration tests covering:
+- Paste creation with various configurations
+- View limits and expiration
+- Validation errors
+- Atomic operations
+- TEST_MODE support
+
+## Repository Structure
 
 ```
 pastebin/
 ├── app/
 │   ├── api/
-│   │   └── snippets/
-│   │       ├── route.ts           # POST /api/snippets
-│   │       └── [id]/
-│   │           └── route.ts       # GET /api/snippets/[id]
-│   ├── s/
-│   │   └── [id]/
-│   │       └── page.tsx           # Snippet view page
-│   ├── layout.tsx                 # Root layout
-│   ├── page.tsx                   # Home page (create form)
-│   └── globals.css                # Global styles
+│   │   ├── healthz/route.ts      # Health check
+│   │   └── pastes/
+│   │       ├── route.ts          # POST /api/pastes
+│   │       └── [id]/route.ts     # GET /api/pastes/:id
+│   ├── p/[id]/page.tsx           # GET /p/:id (HTML view)
+│   ├── s/[id]/page.tsx           # Enhanced UI view
+│   ├── page.tsx                  # Home page
+│   └── layout.tsx                # Root layout
 ├── lib/
-│   ├── db.ts                      # Prisma client singleton
-│   └── utils.ts                   # Utility functions
+│   ├── db.ts                     # Prisma client
+│   └── utils.ts                  # Utilities
 ├── prisma/
-│   ├── schema.prisma              # Database schema
-│   └── migrations/                # Database migrations
-├── package.json
-├── tsconfig.json
-├── next.config.js
-└── README.md
+│   ├── schema.prisma             # Database schema
+│   └── migrations/               # Database migrations
+└── __tests__/
+    └── api/                      # Integration tests
 ```
 
-## Database Schema
+## Notes
 
-```prisma
-model Snippet {
-  id        String   @id
-  content   String
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  maxViews  Int
-  viewCount Int      @default(0)
+- **No hardcoded URLs** - All URLs are generated dynamically
+- **No secrets in code** - All sensitive data in environment variables
+- **Serverless-compatible** - No global mutable state
+- **Automatic migrations** - Prisma migrations run on deployment
+- **TEST_MODE support** - Enables deterministic time testing
 
-  @@index([expiresAt])
-}
-```
+---
 
-## Development Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
-- `npx prisma studio` - Open Prisma Studio (database GUI)
-- `npx prisma migrate dev` - Create and apply migrations
-
-## Key Implementation Details
-
-### Expiration Logic
-
-Snippets expire when **either** condition is met:
-1. Current time > `expiresAt`
-2. `viewCount` >= `maxViews`
-
-The API enforces this in the following order:
-1. Check if snippet exists (404 if not)
-2. Check time expiration (410 if expired)
-3. Check view limit (410 if reached)
-4. Atomically increment view count
-5. Return snippet content
-
-### Atomic View Counting
-
-View counts are incremented atomically using Prisma's built-in atomic operations:
-
-```typescript
-await prisma.snippet.update({
-  where: { id },
-  data: {
-    viewCount: { increment: 1 }
-  }
-})
-```
-
-This prevents race conditions when multiple users view the same snippet simultaneously.
-
-### ID Generation
-
-Snippets use short, URL-safe IDs generated with `nanoid`:
-- 10 characters long
-- URL-safe alphabet
-- Collision-resistant
-
-## Testing
-
-To test the application:
-
-1. **Create a snippet:**
-   - Visit the home page
-   - Enter content, expiry date, and max views
-   - Submit the form
-
-2. **View the snippet:**
-   - Click the generated link
-   - Refresh multiple times to increment view count
-
-3. **Test expiration:**
-   - Create a snippet with 1 max view
-   - View it once
-   - Try to view it again (should return 410)
-
-## Troubleshooting
-
-### Database Connection Issues
-
-If you see "Can't reach database server":
-- Verify `DATABASE_URL` is correct
-- Check if your database is running
-- For Neon, ensure `?sslmode=require` is in the connection string
-
-### Build Errors
-
-If Prisma Client is not found:
-```bash
-npx prisma generate
-```
-
-### Port Already in Use
-
-If port 3000 is busy:
-```bash
-npm run dev -- -p 3001
-```
-
-## License
-
-MIT
-
-## Support
-
-For issues or questions, please open an issue on GitHub.
+**Deployed URL:** https://pastebin-orcin.vercel.app  
+**Repository:** https://github.com/Deekshitha0304/Pastebin

@@ -8,21 +8,8 @@
 import { useState, FormEvent, ChangeEvent, useEffect, useRef } from 'react';
 
 export default function HomePage() {
-  // Helper to get default expiry time (1 hour from now)
-  const getDefaultExpiryTime = () => {
-    const date = new Date();
-    date.setHours(date.getHours() + 1);
-    // Format for datetime-local input: YYYY-MM-DDTHH:mm
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
   const [content, setContent] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
+  const [ttlSeconds, setTtlSeconds] = useState<number | ''>('');
   const [maxViews, setMaxViews] = useState<number | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snippetUrl, setSnippetUrl] = useState('');
@@ -100,21 +87,20 @@ export default function HomePage() {
     if (!content.trim()) return false;
     
     // At least one expiry method must be set
-    const hasExpiresAt = expiresAt && expiresAt.trim() !== '';
-    const hasMaxViews = maxViews && maxViews > 0;
+    const hasTtlSeconds = ttlSeconds && ttlSeconds >= 1;
+    const hasMaxViews = maxViews && maxViews >= 1;
     
-    if (!hasExpiresAt && !hasMaxViews) {
+    if (!hasTtlSeconds && !hasMaxViews) {
       return false; // Need at least one expiry method
     }
     
-    // If expiry date is set, it must be in the future
-    if (hasExpiresAt) {
-      const expiryDate = new Date(expiresAt);
-      if (expiryDate <= new Date()) return false;
+    // If ttl_seconds is set, it must be >= 1
+    if (ttlSeconds !== '' && ttlSeconds < 1) {
+      return false;
     }
     
-    // If maxViews is set, it must be positive
-    if (hasMaxViews && maxViews <= 0) {
+    // If maxViews is set, it must be >= 1
+    if (maxViews !== '' && maxViews < 1) {
       return false;
     }
     
@@ -126,7 +112,7 @@ export default function HomePage() {
     setCopyStatus('idle');
     // Reset form and refocus textarea
     setContent('');
-    setExpiresAt('');
+    setTtlSeconds('');
     setMaxViews('');
     setTimeout(() => textareaRef.current?.focus(), 100);
   };
@@ -167,20 +153,20 @@ export default function HomePage() {
     setError('');
 
     try {
-      // Build request body with only provided fields
+      // Build request body with only provided fields (per spec format)
       const requestBody: any = {
         content: content.trim(),
       };
       
-      if (expiresAt) {
-        requestBody.expiresAt = new Date(expiresAt).toISOString();
+      if (ttlSeconds) {
+        requestBody.ttl_seconds = Number(ttlSeconds);
       }
       
       if (maxViews) {
-        requestBody.maxViews = Number(maxViews);
+        requestBody.max_views = Number(maxViews);
       }
 
-      const response = await fetch('/api/snippets', {
+      const response = await fetch('/api/pastes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,8 +195,9 @@ export default function HomePage() {
     if (error) setError('');
   };
 
-  const handleExpiresAtChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setExpiresAt(e.target.value);
+  const handleTtlSecondsChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTtlSeconds(value === '' ? '' : parseInt(value, 10));
     if (error) setError('');
   };
 
@@ -280,17 +267,19 @@ export default function HomePage() {
             <div className="grid md:grid-cols-2 gap-4 mb-6">
               {/* TTL Input */}
               <div className="bg-gray-50 rounded-lg p-5">
-                <label htmlFor="expiresAt" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Expiry Time <span className="text-gray-400 font-normal">(optional)</span>
+                <label htmlFor="ttlSeconds" className="block text-sm font-semibold text-gray-700 mb-2">
+                  TTL (seconds) <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
                   Leave blank for no time limit.
                 </p>
                 <input
-                  type="datetime-local"
-                  id="expiresAt"
-                  value={expiresAt}
-                  onChange={handleExpiresAtChange}
+                  type="number"
+                  id="ttlSeconds"
+                  value={ttlSeconds}
+                  onChange={handleTtlSecondsChange}
+                  min="1"
+                  placeholder="e.g., 3600"
                   className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none transition-all"
                 />
               </div>
@@ -335,7 +324,7 @@ export default function HomePage() {
               
               {/* Settings Preview */}
               <div className="flex items-center justify-end gap-4 mt-3 text-sm text-gray-500">
-                <span>Expiry: {expiresAt ? 'set' : 'none'}</span>
+                <span>TTL: {ttlSeconds ? `${ttlSeconds}s` : 'none'}</span>
                 <span>•</span>
                 <span>Max views: {maxViews || 'unlimited'}</span>
               </div>

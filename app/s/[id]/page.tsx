@@ -9,12 +9,10 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-type SnippetData = {
+type PasteData = {
   content: string;
-  viewCount: number;
-  createdAt: string;
-  expiresAt: string | null;
-  maxViews: number | null;
+  remaining_views: number | null;
+  expires_at: string | null;
 };
 
 type ErrorState = {
@@ -26,7 +24,7 @@ export default function SnippetPage() {
   const params = useParams();
   const id = params?.id as string;
   
-  const [snippet, setSnippet] = useState<SnippetData | null>(null);
+  const [paste, setPaste] = useState<PasteData | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<string>('');
@@ -34,11 +32,11 @@ export default function SnippetPage() {
 
   // Calculate countdown
   useEffect(() => {
-    if (!snippet?.expiresAt) return;
+    if (!paste?.expires_at) return;
 
     const updateCountdown = () => {
       const now = new Date().getTime();
-      const expiry = new Date(snippet.expiresAt!).getTime();
+      const expiry = new Date(paste.expires_at!).getTime();
       const distance = expiry - now;
 
       if (distance < 0) {
@@ -69,22 +67,22 @@ export default function SnippetPage() {
     const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
-  }, [snippet]);
+  }, [paste]);
 
   useEffect(() => {
-    const fetchSnippet = async () => {
+    const fetchPaste = async () => {
       try {
-        const response = await fetch(`/api/snippets/${id}`);
+        const response = await fetch(`/api/pastes/${id}`);
         const data = await response.json();
 
         if (!response.ok) {
-          // Treat 404/410 or any error as expired/unavailable
+          // All unavailable cases return 404 per spec
           setError({
-            status: response.status,
-            message: response.status === 404 ? 'Snippet not found' : 'Snippet has expired'
+            status: 404,
+            message: 'Paste not found or expired'
           });
         } else {
-          setSnippet(data);
+          setPaste(data);
         }
       } catch (err) {
         setError({
@@ -97,7 +95,7 @@ export default function SnippetPage() {
     };
 
     if (id) {
-      fetchSnippet();
+      fetchPaste();
     }
   }, [id]);
 
@@ -149,20 +147,9 @@ export default function SnippetPage() {
     );
   }
 
-  if (!snippet) {
+  if (!paste) {
     return null;
   }
-
-  // Format created date
-  const createdDate = new Date(snippet.createdAt);
-  const formattedCreated = createdDate.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
 
   return (
     <div className="min-h-screen px-4 py-12 bg-gray-50">
@@ -175,9 +162,6 @@ export default function SnippetPage() {
               Paste view
             </div>
             <h1 className="text-4xl font-bold text-gray-900">Paste</h1>
-            <p className="text-gray-600 mt-1">
-              Created: {formattedCreated}
-            </p>
           </div>
           <Link
             href="/"
@@ -196,13 +180,15 @@ export default function SnippetPage() {
             <span className="font-medium text-gray-700">ID:</span>
             <span className="font-mono text-gray-900">{id}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700">Views:</span>
-            <span className="font-mono text-gray-900">
-              {snippet.viewCount}{snippet.maxViews ? ` / ${snippet.maxViews}` : ' (unlimited)'}
-            </span>
-          </div>
-          {countdown && snippet.expiresAt && (
+          {paste.remaining_views !== null && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700">Remaining views:</span>
+              <span className="font-mono text-gray-900">
+                {paste.remaining_views}
+              </span>
+            </div>
+          )}
+          {countdown && paste.expires_at && (
             <div className="flex items-center gap-2">
               <svg className={`w-4 h-4 ${isExpiringSoon ? 'text-yellow-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -219,7 +205,7 @@ export default function SnippetPage() {
         <div className="p-6">
           <pre className="bg-gray-50 rounded-lg p-6 overflow-x-auto scrollbar-thin border border-gray-200">
             <code className="font-mono text-sm text-gray-900 leading-relaxed whitespace-pre-wrap break-words">
-              {snippet.content}
+              {paste.content}
             </code>
           </pre>
         </div>
