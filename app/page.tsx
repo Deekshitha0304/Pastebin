@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, FormEvent, ChangeEvent, useEffect, useRef } from 'react';
+import { Modal } from './components/Modal';
 
 export default function HomePage() {
   const [content, setContent] = useState('');
@@ -17,69 +18,16 @@ export default function HomePage() {
   const [showModal, setShowModal] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [currentHost, setCurrentHost] = useState('');
-  
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Auto-focus textarea on mount and get current host
   useEffect(() => {
     textareaRef.current?.focus();
-    // Get current browser host (client-side only)
     if (typeof window !== 'undefined') {
       setCurrentHost(window.location.host);
     }
   }, []);
-
-  // Modal focus management
-  useEffect(() => {
-    if (showModal) {
-      previousFocusRef.current = document.activeElement as HTMLElement;
-      document.body.classList.add('modal-open');
-      
-      // Focus first button in modal
-      const firstButton = modalRef.current?.querySelector('button');
-      firstButton?.focus();
-
-      // Trap focus in modal
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          closeModal();
-        }
-        
-        if (e.key === 'Tab') {
-          const focusableElements = modalRef.current?.querySelectorAll(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
-          if (!focusableElements || focusableElements.length === 0) return;
-          
-          const firstElement = focusableElements[0] as HTMLElement;
-          const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-          
-          if (e.shiftKey) {
-            if (document.activeElement === firstElement) {
-              e.preventDefault();
-              lastElement.focus();
-            }
-          } else {
-            if (document.activeElement === lastElement) {
-              e.preventDefault();
-              firstElement.focus();
-            }
-          }
-        }
-      };
-
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-      };
-    } else {
-      document.body.classList.remove('modal-open');
-      // Restore focus
-      previousFocusRef.current?.focus();
-    }
-  }, [showModal]);
 
   // Client-side validation
   const isFormValid = (): boolean => {
@@ -331,86 +279,51 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Success Modal */}
-      {showModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          onClick={() => setShowModal(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <div
-            ref={modalRef}
-            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close Button */}
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label="Close modal"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Modal Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <h2 id="modal-title" className="text-2xl font-bold text-gray-900">
-                  Your link is ready
-                </h2>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Created
-                </span>
-              </div>
-              <p className="text-gray-600">
-                Copy the link below, or open it in a new tab.
-              </p>
-            </div>
-
-            {/* Paste URL */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                PASTE URL
-              </label>
-              <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
-                <p className="font-mono text-sm text-gray-900 break-all">
-                  {snippetUrl}
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 mb-6">
-              <button
-                onClick={handleCopyToClipboard}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                {copyStatus === 'copied' ? 'Copied ✓' : copyStatus === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
-              </button>
-              <a
-                href={snippetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 px-6 rounded-lg border-2 border-gray-200 transition-colors text-center"
-              >
-                Open
-              </a>
-            </div>
-
-            {/* Close Button */}
-            <button
-              onClick={closeModal}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-6 rounded-lg transition-colors"
-            >
-              Close
-            </button>
+      {/* Success Modal - native <dialog> + Tailwind */}
+      <Modal
+        open={showModal}
+        onClose={closeModal}
+        title="Your link is ready"
+        titleBadge={
+          <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+            Created
+          </span>
+        }
+        subtitle="Copy the link below, or open it in a new tab."
+      >
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-semibold text-gray-700">PASTE URL</label>
+          <div className="rounded-lg border-2 border-gray-200 bg-gray-50 p-4">
+            <p className="break-all font-mono text-sm text-gray-900">{snippetUrl}</p>
           </div>
         </div>
-      )}
+
+        <div className="mb-6 flex gap-3">
+          <button
+            type="button"
+            onClick={handleCopyToClipboard}
+            className="flex-1 rounded-lg bg-indigo-600 py-3 px-6 font-semibold text-white transition-colors hover:bg-indigo-700"
+          >
+            {copyStatus === 'copied' ? 'Copied ✓' : copyStatus === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
+          </button>
+          <a
+            href={snippetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 rounded-lg border-2 border-gray-200 bg-white py-3 px-6 text-center font-semibold text-gray-900 transition-colors hover:bg-gray-50"
+          >
+            Open
+          </a>
+        </div>
+
+        <button
+          type="button"
+          onClick={closeModal}
+          className="w-full rounded-lg bg-gray-100 py-2.5 px-6 font-medium text-gray-700 transition-colors hover:bg-gray-200"
+        >
+          Close
+        </button>
+      </Modal>
     </>
   );
 }

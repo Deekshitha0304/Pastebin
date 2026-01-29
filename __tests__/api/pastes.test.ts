@@ -3,6 +3,16 @@
  * Tests all core functionality as per PDF specification
  */
 
+// Mock ESM-only nanoid so Jest (CJS) can load app code that uses it (hoisted).
+// Return unique URL-safe IDs per call so ID generation tests pass.
+let mockIdCounter = 0;
+jest.mock('nanoid', () => ({
+  nanoid: (size: number = 10) => {
+    const suffix = (++mockIdCounter).toString(36) + 'x'.repeat(Math.max(0, size - 8));
+    return suffix.slice(0, size);
+  },
+}));
+
 import { prisma } from '@/lib/db';
 import { POST } from '@/app/api/pastes/route';
 import { GET } from '@/app/api/pastes/[id]/route';
