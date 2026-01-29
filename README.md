@@ -27,7 +27,7 @@ This is a production-ready paste-sharing service built with Next.js, TypeScript,
    ```
 
 3. **Configure environment variables:**
-   Create a `.env.local` file in the project root:
+   Create a `.env` file in the project root:
    ```env
    DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
    ```
@@ -213,7 +213,6 @@ pastebin/
 │   │       ├── route.ts          # POST /api/pastes
 │   │       └── [id]/route.ts     # GET /api/pastes/:id
 │   ├── p/[id]/page.tsx           # GET /p/:id (HTML view)
-│   ├── s/[id]/page.tsx           # Enhanced UI view
 │   ├── page.tsx                  # Home page
 │   └── layout.tsx                # Root layout
 ├── lib/
